@@ -3,7 +3,7 @@
 #include <tf/transform_listener.h>
 #include <pcl_ros/transforms.h>
 #include <laser_geometry/laser_geometry.h>
-#include <pcl/ros/conversions.h>
+#include <pcl/conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
@@ -55,6 +55,8 @@ private:
     string cloud_destination_topic;
     string scan_destination_topic;
     string laserscan_topics;
+    string base_link_topic;
+    string odom_topic;
 };
 
 void LaserscanMerger::reconfigureCallback(laserscan_multi_mergerConfig &config, uint32_t level)
@@ -82,7 +84,7 @@ void LaserscanMerger::laserscan_topic_parser()
 
 	for(int i=0;i<tokens.size();++i)
 	{
-	        for(int j=0;j<topics.size();++j)
+	    for(int j=0;j<topics.size();++j)
 		{
 			if( (tokens[i].compare(topics[j].name) == 0) && (topics[j].datatype.compare("sensor_msgs/LaserScan") == 0) )
 			{
@@ -110,7 +112,7 @@ void LaserscanMerger::laserscan_topic_parser()
             scan_subscribers.resize(input_topics.size());
 			clouds_modified.resize(input_topics.size());
 			clouds.resize(input_topics.size());
-            ROS_INFO("Subscribing to topics\t%ld", scan_subscribers.size());
+            printf("Subscribing to topics\t%ld", scan_subscribers.size());
 			for(int i=0; i<input_topics.size(); ++i)
 			{
                 scan_subscribers[i] = node_.subscribe<sensor_msgs::LaserScan> (input_topics[i].c_str(), 1, boost::bind(&LaserscanMerger::scanCallback,this, _1, input_topics[i]));
@@ -119,7 +121,7 @@ void LaserscanMerger::laserscan_topic_parser()
 			}
 		}
 		else
-            ROS_INFO("Not subscribed to any topic.");
+            printf("Not subscribed to any topic.");
 	}
 }
 
@@ -131,6 +133,10 @@ LaserscanMerger::LaserscanMerger()
 	nh.getParam("cloud_destination_topic", cloud_destination_topic);
 	nh.getParam("scan_destination_topic", scan_destination_topic);
     nh.getParam("laserscan_topics", laserscan_topics);
+    nh.getParam("base_link_topic", base_link_topic);
+    nh.getParam("odom_topic", odom_topic);
+
+    tfListener_.waitForTransform(base_link_topic.c_str(), odom_topic.c_str(), ros::Time::now(), ros::Duration(5.0));
 
     this->laserscan_topic_parser();
 
